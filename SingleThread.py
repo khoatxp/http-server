@@ -9,8 +9,16 @@ def handle_request(request):
     #Get the first header for filename information
     filename = None
     first_header_fields = headers[0].split(" ")
-    if len(first_header_fields) > 1:
+
+    if len(first_header_fields) == 3 :
+        if(first_header_fields[2] != 'HTTP/1.1'):
+            return 'HTTP/1.1 400 BAD REQUEST\n\nInvalid HTTP version'
+        if(first_header_fields[0] != 'GET'):
+            return 'HTTP/1.1 400 BAD REQUEST\n\nInvalid method'
         filename = first_header_fields[1]
+        
+    else:
+        return 'HTTP/1.1 400 BAD REQUEST\n\n'
 
     #Remove slash from file name if present
     if filename is not None and filename[0] == "/":
@@ -45,6 +53,8 @@ def handle_request(request):
                 if if_modified_since.tzinfo is datetime.timezone.utc:
                     last_modif = datetime.datetime.fromtimestamp(file_status.st_mtime, datetime.timezone.utc)
                     last_modif = last_modif.replace(microsecond=0)
+                    print(last_modif)
+                    print(if_modified_since)
                     if last_modif <= if_modified_since:
                         return 'HTTP/1.1 304 NOT MODIFIED\n\n'
 
@@ -63,7 +73,6 @@ def handle_request(request):
     except TypeError:
         pass
 
-    #TODO: implement 400 Bad Request 
 
 
 
@@ -84,6 +93,7 @@ while True:
 
     #Get the client request
     request = clientConn.recv(1024).decode()
+    print(request)
 
     response = handle_request(request)
     clientConn.sendall(response.encode())
