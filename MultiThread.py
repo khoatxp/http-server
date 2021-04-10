@@ -1,9 +1,10 @@
-from socket import *
+import socket
 import email.utils
 import os, sys
 import datetime
+from threading import Thread
 
-
+# Copy of the function in single thread
 def handle_request(request):
     headers = request.split('\r\n')
 
@@ -72,29 +73,47 @@ def handle_request(request):
     except TypeError:
         pass
 
+# Following tutorial on https://www.techbeamers.com/python-tutorial-write-multithreaded-python-server/
+class ClientThread(Thread):
 
-# Set up host and socket
-HOST = '0.0.0.0'
-PORT = 5000
-server = socket(AF_INET, SOCK_STREAM)
-server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    def __init__(self, ip, port):
+        Thread.__init__(self)
+        self.ip = ip
+        self.port = port
+        print("[+] New server socket thread started for " + ip + ":" + str(port))
+
+    def run(self):
+        while True:
+            request = clientConn.recv(1024).decode()
+            print(request)
+            response = handle_request(request)
+            print ("Server received request:" + request)
+            clientConn.sendall(response.encode())  # echo
+            clientConn.close()
+
+
+# Multithreaded Python server : TCP Server Socket Program Stub
+IP = '0.0.0.0'
+PORT = 2000
+BUFFER_SIZE = 20
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 # Bind server
-server.bind((HOST, PORT))
-server.listen(1)
-print('Listening on port %s ...' % PORT)
+server.bind((IP, PORT))
+server.listen(4)
+threads = []
 
 while True:
     # Wait for client requests
-    clientConn, clientAddr = server.accept()
+    print("Multithreaded Python server : Waiting for connections from TCP clients...")
+    (clientConn, (ip, port)) = server.accept()
+    newThread = ClientThread(ip, port)
 
-    # Get the client request
-    request = clientConn.recv(1024).decode()
-    print(request)
+    # Create new Thread
+    newThread.start()
+    threads.append(newThread)
 
-    response = handle_request(request)
-    clientConn.sendall(response.encode())
-
-    clientConn.close()
-
-server.close()
+# Join for each of the threads
+for t in threads:
+    t.join()
