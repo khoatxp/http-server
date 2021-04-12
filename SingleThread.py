@@ -2,6 +2,7 @@ from socket import *
 import email.utils
 import os, sys
 import datetime
+import time
 
 
 def handle_request(request):
@@ -38,6 +39,7 @@ def handle_request(request):
         key, value = header.split(':', 1)
         header_set[key] = value
 
+    start = time.time()
     try:
         # Based on https://github.com/python/cpython/blob/master/Lib/http/server.py
         if 'If-Modified-Since' in header_set:
@@ -61,16 +63,21 @@ def handle_request(request):
         file_reader = open(filename)
         content = file_reader.read()
         file_reader.close()
-        return 'HTTP/1.1 200 OK\n\n' + content
-
+        #Sleep for 2 seconds. Uncomment to replicate 408 time out
+        #time.sleep(2)
+        
     except FileNotFoundError:
         return 'HTTP/1.1 404 NOT FOUND\n\nFile Not Found'
 
-    except TimeoutError:
-        return 'HTTP/1.1 408 REQUEST TIME OUT\n\n Request Timed Out'
-
     except TypeError:
         pass
+
+    #Server limits the process time for each request to only 1 second
+    end = time.time()
+    if end - start > 1:
+                return  'HTTP/1.1 408 REQUEST TIMEOUT\n\n 408 REQUEST TIMED OUT'
+
+    return 'HTTP/1.1 200 OK\n\n' + content
 
 
 # Set up host and socket
